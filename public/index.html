@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .qr-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .connected {
+            color: green;
+        }
+        .disconnected {
+            color: red;
+        }
+        .qr-image {
+            max-width: 300px;
+            height: auto;
+        }
+        .refresh-btn {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .refresh-btn:hover {
+            background-color: #45a049;
+        }
+        .api-docs {
+            margin-top: 40px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        code {
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Service</h1>
+        
+        <div class="qr-container">
+            <div class="status" id="status">Status: <span class="disconnected">Disconnected</span></div>
+            <div id="qr-display">
+                <p>Scan the QR code with your WhatsApp to connect:</p>
+                <img src="/api/qrcode" alt="WhatsApp QR Code" class="qr-image" id="qr-code">
+            </div>
+            <div id="connected-info" style="display: none;">
+                <p>WhatsApp is connected! You can now use the API.</p>
+            </div>
+            <button class="refresh-btn" onclick="refreshStatus()">Refresh Status</button>
+        </div>
+
+        <div class="api-docs">
+            <h2>API Documentation</h2>
+            
+            <h3>Check Status</h3>
+            <p><code>GET /api/status</code> - Get the current connection status</p>
+            
+            <h3>Get QR Code</h3>
+            <p><code>GET /api/qrcode</code> - Get the QR code image for scanning</p>
+            
+            <h3>Send Text Message</h3>
+            <p><code>POST /api/send/text</code> - Send a text message</p>
+            <p>Body: <code>{ "to": "phone_number", "text": "Hello world" }</code></p>
+            
+            <h3>Send Image</h3>
+            <p><code>POST /api/send/image</code> - Send an image</p>
+            <p>Form data: <code>to</code>, <code>image</code> (file), <code>caption</code> (optional)</p>
+            
+            <h3>Send Document</h3>
+            <p><code>POST /api/send/document</code> - Send a document</p>
+            <p>Form data: <code>to</code>, <code>document</code> (file), <code>fileName</code></p>
+            
+            <h3>Logout</h3>
+            <p><code>POST /api/logout</code> - Logout from WhatsApp</p>
+            
+            <h3>Get Contacts</h3>
+            <p><code>GET /api/contacts</code> - Get all contacts</p>
+            
+            <h3>Register Webhook</h3>
+            <p><code>POST /api/webhook</code> - Register a webhook for events</p>
+            <p>Body: <code>{ "url": "https://your-webhook.com", "events": ["message", "status"] }</code></p>
+        </div>
+    </div>
+
+    <script>
+        function refreshStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.getElementById('status');
+                    const qrDisplay = document.getElementById('qr-display');
+                    const connectedInfo = document.getElementById('connected-info');
+                    const qrImage = document.getElementById('qr-code');
+                    
+                    if (data.data.status === 'connected') {
+                        statusElement.innerHTML = 'Status: <span class="connected">Connected</span>';
+                        qrDisplay.style.display = 'none';
+                        connectedInfo.style.display = 'block';
+                    } else {
+                        statusElement.innerHTML = 'Status: <span class="disconnected">Disconnected</span>';
+                        qrDisplay.style.display = 'block';
+                        connectedInfo.style.display = 'none';
+                        
+                        // Refresh QR code image with cache-busting
+                        qrImage.src = '/api/qrcode?' + new Date().getTime();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                });
+        }
+
+        // Check status on page load
+        document.addEventListener('DOMContentLoaded', refreshStatus);
+        
+        // Check status every 5 seconds
+        setInterval(refreshStatus, 5000);
+    </script>
+</body>
+</html>
