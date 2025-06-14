@@ -171,6 +171,23 @@ const routes = (whatsappClient) => {
       });
     }
   });
+  
+  // Get groups
+  router.get('/groups', async (req, res) => {
+    try {
+      const groups = await whatsappClient.getGroups();
+      res.json({
+        success: true,
+        data: groups
+      });
+    } catch (error) {
+      console.error('Error getting groups:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
 
   // Webhook registration for message callbacks
   router.post('/webhook', (req, res) => {

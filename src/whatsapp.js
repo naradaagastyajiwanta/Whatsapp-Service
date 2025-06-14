@@ -137,11 +137,26 @@ const setupWhatsAppClient = (server) => {
           throw new Error('WhatsApp client not connected');
         }
         
-        // Format the number to WhatsApp format if needed
-        const formattedNumber = to.includes('@s.whatsapp.net') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+        // Format the recipient ID based on whether it's a group or individual chat
+        let recipientId;
+        
+        if (to.includes('@g.us')) {
+          // It's already a properly formatted group ID
+          recipientId = to;
+        } else if (to.includes('@s.whatsapp.net')) {
+          // It's already a properly formatted individual ID
+          recipientId = to;
+        } else if (to.startsWith('group:')) {
+          // It's a group ID without proper formatting
+          recipientId = `${to.replace('group:', '')}@g.us`;
+        } else {
+          // It's an individual number without proper formatting
+          recipientId = `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+        }
         
         try {
-          const result = await sock.sendMessage(formattedNumber, message);
+          console.log(`Sending message to ${recipientId}`);
+          const result = await sock.sendMessage(recipientId, message);
           return result;
         } catch (error) {
           console.error('Error sending message:', error);
@@ -149,29 +164,61 @@ const setupWhatsAppClient = (server) => {
         }
       },
       sendTextMessage: async (to, text) => {
-        return await sock.sendMessage(
-          to.includes('@s.whatsapp.net') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`, 
-          { text }
-        );
+        // Use the main sendMessage function that handles group IDs
+        if (!sock || connectionStatus !== 'connected') {
+          throw new Error('WhatsApp client not connected');
+        }
+        
+        // Format the recipient ID using the same logic as sendMessage
+        let recipientId;
+        if (to.includes('@g.us')) {
+          recipientId = to;
+        } else if (to.includes('@s.whatsapp.net')) {
+          recipientId = to;
+        } else if (to.startsWith('group:')) {
+          recipientId = `${to.replace('group:', '')}@g.us`;
+        } else {
+          recipientId = `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+        }
+        
+        return await sock.sendMessage(recipientId, { text });
       },
       sendImageMessage: async (to, imageBuffer, caption = '') => {
-        return await sock.sendMessage(
-          to.includes('@s.whatsapp.net') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`,
-          {
-            image: imageBuffer,
-            caption: caption
-          }
-        );
+        // Format the recipient ID using the same logic as sendMessage
+        let recipientId;
+        if (to.includes('@g.us')) {
+          recipientId = to;
+        } else if (to.includes('@s.whatsapp.net')) {
+          recipientId = to;
+        } else if (to.startsWith('group:')) {
+          recipientId = `${to.replace('group:', '')}@g.us`;
+        } else {
+          recipientId = `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+        }
+        
+        return await sock.sendMessage(recipientId, {
+          image: imageBuffer,
+          caption: caption
+        });
       },
       sendDocumentMessage: async (to, documentBuffer, fileName, mimetype) => {
-        return await sock.sendMessage(
-          to.includes('@s.whatsapp.net') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`,
-          {
-            document: documentBuffer,
-            fileName,
-            mimetype
-          }
-        );
+        // Format the recipient ID using the same logic as sendMessage
+        let recipientId;
+        if (to.includes('@g.us')) {
+          recipientId = to;
+        } else if (to.includes('@s.whatsapp.net')) {
+          recipientId = to;
+        } else if (to.startsWith('group:')) {
+          recipientId = `${to.replace('group:', '')}@g.us`;
+        } else {
+          recipientId = `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+        }
+        
+        return await sock.sendMessage(recipientId, {
+          document: documentBuffer,
+          fileName,
+          mimetype
+        });
       },
       onMessage,
       onStatusUpdate,
@@ -189,6 +236,31 @@ const setupWhatsAppClient = (server) => {
           throw new Error('WhatsApp client not connected');
         }
         return sock.getContacts();
+      },
+      getGroups: async () => {
+        if (!sock || connectionStatus !== 'connected') {
+          throw new Error('WhatsApp client not connected');
+        }
+        
+        try {
+          // Get all chats
+          const chats = await sock.groupFetchAllParticipating();
+          
+          // Extract and format group information
+          const groups = Object.entries(chats).map(([id, chat]) => ({
+            id,
+            name: chat.subject,
+            participants: Object.keys(chat.participants).length,
+            creation: chat.creation,
+            owner: chat.owner,
+            desc: chat.desc
+          }));
+          
+          return groups;
+        } catch (error) {
+          console.error('Error fetching groups:', error);
+          throw error;
+        }
       }
     },
     initializeWhatsApp
